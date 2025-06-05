@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather UI App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to right, #6dd5ed, #2193b0); /* Pleasant gradient background */
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        /* Custom styling for subtle box shadow and border */
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .input-field {
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); /* blue-500 equivalent focus ring */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container">
+        <div class="bg-white bg-opacity-90 p-8 md:p-12 rounded-2xl card w-full max-w-md text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Current Weather</h1>
+
+            <!-- Location Input Form -->
+            <form id="weatherForm" class="flex flex-col md:flex-row gap-4 mb-8">
+                <input
+                    type="text"
+                    id="locationInput"
+                    placeholder="Enter city or zip code"
+                    class="input-field flex-grow p-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-gray-700"
+                    required
+                >
+                <button
+                    type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md"
+                >
+                    Get Weather
+                </button>
+            </form>
+
+            <!-- Weather Display Area -->
+            <div id="weatherDisplay" class="mt-6">
+                <div id="loadingIndicator" class="hidden text-blue-600 font-medium">
+                    Loading weather data...
+                </div>
+                <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative">
+                    <span class="block sm:inline" id="errorText"></span>
+                </div>
+                <div id="weatherInfo" class="hidden">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-2" id="locationName"></h2>
+                    <p class="text-5xl font-bold text-blue-600 mb-4" id="temperature"></p>
+                    <p class="text-lg text-gray-600" id="condition"></p>
+                    <img id="conditionIcon" src="" alt="Weather Icon" class="mx-auto mt-4 w-16 h-16">
+                    <div class="grid grid-cols-2 gap-4 mt-6 text-gray-700">
+                        <p class="text-left"><strong class="font-medium">Humidity:</strong> <span id="humidity"></span>%</p>
+                        <p class="text-right"><strong class="font-medium">Wind:</strong> <span id="windSpeed"></span> km/h</p>
+                        <p class="text-left"><strong class="font-medium">Feels Like:</strong> <span id="feelsLike"></span>°C</p>
+                        <p class="text-right"><strong class="font-medium">Last Updated:</strong> <span id="lastUpdated"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const weatherForm = document.getElementById('weatherForm');
+        const locationInput = document.getElementById('locationInput');
+        const weatherDisplay = document.getElementById('weatherDisplay');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const weatherInfo = document.getElementById('weatherInfo');
+        const locationName = document.getElementById('locationName');
+        const temperature = document.getElementById('temperature');
+        const condition = document.getElementById('condition');
+        const conditionIcon = document.getElementById('conditionIcon');
+        const humidity = document.getElementById('humidity');
+        const windSpeed = document.getElementById('windSpeed');
+        const feelsLike = document.getElementById('feelsLike');
+        const lastUpdated = document.getElementById('lastUpdated');
+
+        // API Key (provided by the user)
+        const API_KEY = '23a84e17c4de4025a5a140838250506';
+        const BASE_URL = 'https://api.weatherapi.com/v1/current.json';
+
+        // Function to show/hide elements
+        const showElement = (element) => element.classList.remove('hidden');
+        const hideElement = (element) => element.classList.add('hidden');
+
+        // Function to display error message
+        const displayError = (message) => {
+            hideElement(loadingIndicator);
+            hideElement(weatherInfo);
+            showElement(errorMessage);
+            errorText.textContent = message;
+        };
+
+        // Function to fetch weather data
+        const fetchWeatherData = async (location) => {
+            // Hide previous results and show loading indicator
+            hideElement(weatherInfo);
+            hideElement(errorMessage);
+            showElement(loadingIndicator);
+
+            try {
+                // Construct the API URL
+                const url = `${BASE_URL}?key=${API_KEY}&q=${encodeURIComponent(location)}&aqi=no`; // aqi=no to simplify for current use
+
+                // Make the API request
+                const response = await fetch(url);
+                const data = await response.json();
+
+                // Check for API errors
+                if (response.status !== 200 || data.error) {
+                    displayError(data.error ? data.error.message : 'Something went wrong. Please try again.');
+                    return;
+                }
+
+                // Update the DOM with weather information
+                locationName.textContent = `${data.location.name}, ${data.location.region}, ${data.location.country}`;
+                temperature.textContent = `${data.current.temp_c}°C`;
+                condition.textContent = data.current.condition.text;
+                conditionIcon.src = `https:${data.current.condition.icon}`; // Use the full URL for the icon
+                humidity.textContent = data.current.humidity;
+                windSpeed.textContent = data.current.wind_kph;
+                feelsLike.textContent = data.current.feelslike_c;
+                lastUpdated.textContent = new Date(data.current.last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                // Show weather info and hide loading
+                hideElement(loadingIndicator);
+                showElement(weatherInfo);
+
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                displayError('Failed to fetch weather data. Please check your internet connection or try again later.');
+            }
+        };
+
+        // Event listener for form submission
+        weatherForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent default form submission
+            const location = locationInput.value.trim();
+            if (location) {
+                fetchWeatherData(location);
+            } else {
+                displayError('Please enter a location.');
+            }
+        });
+
+        // Optional: Fetch weather for a default location on page load
+        window.onload = () => {
+            fetchWeatherData('New York'); // You can set any default city here
+        };
+
+    </script>
+</body>
+</html>
